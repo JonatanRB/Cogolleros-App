@@ -2,11 +2,11 @@ package com.sportydev.agrobugs
 
 data class Plaga(
     val idPlaga: Int,
+    val idCultivo: Int,
     val nomPlaga: String,
     val nomcientifico: String,
     val descPlaga: String,
     val imageName: List<String>,
-
     val damage: String = "",
     val muestreo: String = "",
     val biolControl: String = "",

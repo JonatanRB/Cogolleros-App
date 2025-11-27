@@ -28,6 +28,11 @@ class InformationBugActivity : BaseActivity() {
     private lateinit var ivSubImage1: ShapeableImageView
     private lateinit var ivSubImage2: ShapeableImageView
 
+    // ✅ Vistas para el badge de detección
+    private lateinit var detectionBadge: MaterialCardView
+    private lateinit var tvDetectionLabel: TextView
+    private lateinit var tvDetectionConfidence: TextView
+
     // Vistas para el Bottom Sheet
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<MaterialCardView>
     private lateinit var tvSheetTitle: TextView
@@ -38,6 +43,7 @@ class InformationBugActivity : BaseActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_information_bug)
 
+        // Inicializar vistas
         tvPestName = findViewById(R.id.tvBugName)
         tvScientificName = findViewById(R.id.tvScientificName)
         tvPestDescription = findViewById(R.id.tvBugDescription)
@@ -45,7 +51,59 @@ class InformationBugActivity : BaseActivity() {
         ivSubImage1 = findViewById(R.id.ivSubImage1)
         ivSubImage2 = findViewById(R.id.ivSubImage2)
 
+        // Inicializar badge de detección
+        detectionBadge = findViewById(R.id.detectionBadge)
+        tvDetectionLabel = findViewById(R.id.tvDetectionLabel)
+        tvDetectionConfidence = findViewById(R.id.tvDetectionConfidence)
+
+        // ✅ VERIFICAR SI VIENE DEL AKINATOR
+        val fromAkinator = intent.getBooleanExtra("FROM_AKINATOR", false)
+
+        if (fromAkinator) {
+            handleAkinatorResult()
+        } else {
+            handleNormalFlow()
+        }
+    }
+
+    // ✅ NUEVO MÉTODO: Manejar resultado del Akinator
+    private fun handleAkinatorResult() {
+        val pestName = intent.getStringExtra("PEST_NAME")
+        val pestId = intent.getStringExtra("PEST_ID")
+        val probability = intent.getDoubleExtra("PEST_PROBABILITY", 0.0)
+
+        if (pestName != null) {
+            val dbHelper = AdminBd(this)
+
+            // Intentar buscar por ID primero (más confiable)
+            var pest: Plaga? = null
+            if (pestId != null) {
+                pest = PestMapper.findPestInDatabaseAkinator(pestId, dbHelper)
+            }
+
+            // Si no se encuentra por ID, buscar por nombre
+            if (pest == null) {
+                pest = dbHelper.getPestByName(pestName)
+            }
+
+            if (pest != null) {
+                populateUI(pest)
+                showAkinatorConfidence(probability)
+            } else {
+                // No se encontró en la BD, mostrar info básica
+                showBasicAkinatorInfo()
+            }
+        } else {
+            Toast.makeText(this, "Error: No se recibió información de la plaga", Toast.LENGTH_SHORT).show()
+            finish()
+        }
+    }
+
+    // ✅ NUEVO MÉTODO: Flujo normal (desde detección de imagen o búsqueda manual)
+    private fun handleNormalFlow() {
         val pestId = intent.getIntExtra(EXTRA_PLAGA_ID, -1)
+        val detectedName = intent.getStringExtra("detected_name")
+        val confidence = intent.getFloatExtra("confidence", 0f)
 
         if (pestId != -1) {
             val dbHelper = AdminBd(this)
@@ -53,6 +111,11 @@ class InformationBugActivity : BaseActivity() {
 
             if (pest != null) {
                 populateUI(pest)
+
+                // Mostrar badge si viene de detección automática
+                if (detectedName != null && confidence > 0) {
+                    showDetectionBadge(detectedName, confidence)
+                }
             } else {
                 Toast.makeText(this, "Error: No se encontró la plaga.", Toast.LENGTH_SHORT).show()
                 finish()
@@ -70,6 +133,121 @@ class InformationBugActivity : BaseActivity() {
 
         setupImageHeader(pest.imageName)
         setupViewsAndListeners(pest)
+    }
+
+    // ✅ MÉTODO PARA MOSTRAR EL BADGE DE DETECCIÓN POR IMAGEN
+    private fun showDetectionBadge(detectedName: String, confidence: Float) {
+        val confidencePercent = String.format("%.1f%%", confidence * 100)
+
+        // Hacer visible el badge
+        detectionBadge.visibility = View.VISIBLE
+
+        // Establecer textos
+        tvDetectionLabel.text = "✓ Detectado: $detectedName"
+        tvDetectionConfidence.text = "Confianza: $confidencePercent"
+
+        // Cambiar colores según nivel de confianza
+        when {
+            confidence >= 0.8f -> {
+                // Alta confianza - Verde brillante
+                detectionBadge.setCardBackgroundColor(0xFFE8F5E9.toInt())
+                detectionBadge.strokeColor = 0xFF4CAF50.toInt()
+                tvDetectionLabel.setTextColor(0xFF1B5E20.toInt())
+                tvDetectionConfidence.setTextColor(0xFF2E7D32.toInt())
+            }
+            confidence >= 0.6f -> {
+                // Confianza media - Amarillo
+                detectionBadge.setCardBackgroundColor(0xFFFFF9C4.toInt())
+                detectionBadge.strokeColor = 0xFFFBC02D.toInt()
+                tvDetectionLabel.setTextColor(0xFF827717.toInt())
+                tvDetectionConfidence.setTextColor(0xFF9E9D24.toInt())
+            }
+            else -> {
+                // Baja confianza - Naranja
+                detectionBadge.setCardBackgroundColor(0xFFFFE0B2.toInt())
+                detectionBadge.strokeColor = 0xFFFF9800.toInt()
+                tvDetectionLabel.setTextColor(0xFFE65100.toInt())
+                tvDetectionConfidence.setTextColor(0xFFEF6C00.toInt())
+            }
+        }
+
+        // Toast de confirmación
+        Toast.makeText(
+            this,
+            "Plaga detectada automáticamente",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    // ✅ MÉTODO PARA MOSTRAR CONFIANZA DEL AKINATOR
+    private fun showAkinatorConfidence(probability: Double) {
+        val confidencePercent = (probability * 100).toInt()
+        val confidenceFloat = probability.toFloat()
+
+        // Hacer visible el badge
+        detectionBadge.visibility = View.VISIBLE
+
+        // Establecer textos
+        tvDetectionLabel.text = "✓ Identificado por Akinator"
+        tvDetectionConfidence.text = "Confianza: $confidencePercent%"
+
+        // Cambiar colores según nivel de confianza
+        when {
+            confidenceFloat >= 0.8f -> {
+                // Alta confianza - Verde brillante
+                detectionBadge.setCardBackgroundColor(0xFFE8F5E9.toInt())
+                detectionBadge.strokeColor = 0xFF4CAF50.toInt()
+                tvDetectionLabel.setTextColor(0xFF1B5E20.toInt())
+                tvDetectionConfidence.setTextColor(0xFF2E7D32.toInt())
+            }
+            confidenceFloat >= 0.6f -> {
+                // Confianza media - Amarillo
+                detectionBadge.setCardBackgroundColor(0xFFFFF9C4.toInt())
+                detectionBadge.strokeColor = 0xFFFBC02D.toInt()
+                tvDetectionLabel.setTextColor(0xFF827717.toInt())
+                tvDetectionConfidence.setTextColor(0xFF9E9D24.toInt())
+            }
+            else -> {
+                // Baja confianza - Naranja
+                detectionBadge.setCardBackgroundColor(0xFFFFE0B2.toInt())
+                detectionBadge.strokeColor = 0xFFFF9800.toInt()
+                tvDetectionLabel.setTextColor(0xFFE65100.toInt())
+                tvDetectionConfidence.setTextColor(0xFFEF6C00.toInt())
+            }
+        }
+
+        // Toast de confirmación
+        Toast.makeText(
+            this,
+            "Plaga identificada por Akinator con $confidencePercent% de confianza",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    // ✅ NUEVO MÉTODO: Mostrar info básica cuando no se encuentra en BD
+    private fun showBasicAkinatorInfo() {
+        val pestName = intent.getStringExtra("PEST_NAME")
+        val scientificName = intent.getStringExtra("PEST_SCIENTIFIC_NAME")
+        val probability = intent.getDoubleExtra("PEST_PROBABILITY", 0.0)
+
+        tvPestName.text = pestName ?: "Plaga no identificada"
+        tvScientificName.text = scientificName ?: ""
+        tvPestDescription.text = "Esta plaga fue identificada mediante el sistema Akinator, pero no se encontró información detallada en la base de datos local."
+
+        // Mostrar badge
+        showAkinatorConfidence(probability)
+
+        // Ocultar imágenes o poner placeholder
+        setupImageHeader(listOf("img_question"))
+
+        // Configurar botón de volver
+        findViewById<MaterialCardView>(R.id.btnBack).setOnClickListener { finish() }
+
+        Toast.makeText(
+            this,
+            "Información limitada: Plaga no encontrada en base de datos",
+            Toast.LENGTH_LONG
+        ).show()
     }
 
     private fun setupImageHeader(imageNames: List<String>) {
@@ -104,7 +282,7 @@ class InformationBugActivity : BaseActivity() {
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
         }
 
-        // --- Configuración de Items CON ICONOS ---
+        // Configuración de Items CON ICONOS
         setupInfoItem(R.id.itemDamage, R.drawable.ic_damage, "Daños", {
             showBottomSheetWithContent("Daños a los Cultivos", pest.damage)
         })

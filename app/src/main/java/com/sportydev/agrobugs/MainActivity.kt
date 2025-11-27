@@ -13,6 +13,7 @@ import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : BaseActivity() {
+
     private lateinit var admin: AdminBd
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,9 +49,8 @@ class MainActivity : BaseActivity() {
 
         // Enlaza la nueva Card para búsqueda guiada (antes cardBusquedaBinaria)
         findViewById<MaterialCardView>(R.id.cardGuidedSearch).setOnClickListener {
-            startActivity(Intent(this, SearchBinaryActivity::class.java))
+            startActivity(Intent(this, PestAkinatorActivity::class.java))
             overridePendingTransition(0, 0)
-
         }
 
         // Enlaza la nueva Card para la enciclopedia (antes cardBusquedaManual)
@@ -100,5 +100,7 @@ class MainActivity : BaseActivity() {
             startActivity(Intent(this, ConfigurationActivity::class.java))
             overridePendingTransition(0, 0)
         }
+
     }
+
 }

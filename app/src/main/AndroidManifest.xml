@@ -45,6 +45,9 @@
             android:name=".SearchImageActivity"
             android:exported="false" />
         <activity
+            android:name=".PestAkinatorActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:windowFullscreen="true">
