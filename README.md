@@ -1,5 +1,6 @@
 # Cogolleros App
-![Uploading Copilot_20251127_191526.png…]()
+[![Uploading Copilot_20251127_191526.png…]()](https://drive.google.com/uc?export=view&id=1rlGsuHP3vdj6DO-qaqwXzLiT735a_-AF
+)
 
 ## Descripción
 
@@ -26,4 +27,5 @@ Para más información o soporte técnico, contáctanos en:
 🌐 [www.cogollerosapp.com](http://www.cogollerosapp.com)
 
 ---
+
 
